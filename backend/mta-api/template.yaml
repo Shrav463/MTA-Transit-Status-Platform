@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: mta-api (AWS SAM + HTTP API + Lambda)
+
+Globals:
+  Function:
+    Timeout: 15
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+
+Resources:
+  # Explicit HTTP API so we can reference it safely in Outputs
+  MtaHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: Prod
+
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: hello_world/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+
+      Environment:
+        Variables:
+          MTA_EQUIPMENT_URL: "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fnyct_ene_equipments.json"
+          MTA_OUTAGES_URL: "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/nyct%2Fnyct_ene.json"
+          # Optional: if you have a key, put it here. Otherwise keep it empty.
+          MTA_API_KEY: ""
+
+      Events:
+        Stations:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: MtaHttpApi
+            Path: /stations
+            Method: GET
+
+        Status:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: MtaHttpApi
+            Path: /status
+            Method: GET
+
+        Coords:
+          Type: HttpApi
+          Properties:
+            ApiId:
+              Ref: MtaHttpApi
+            Path: /coords
+            Method: GET
+
+  # Optional monitoring resources (you can keep or delete)
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
+
+Outputs:
+  HttpApiUrl:
+    Description: HTTP API endpoint base URL (Prod stage)
+    Value:
+      Fn::Sub: "https://${MtaHttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/Prod"
+
+  HelloWorldFunctionArn:
+    Description: Lambda Function ARN
+    Value:
+      Fn::GetAtt:
+        - HelloWorldFunction
+        - Arn
