@@ -11,7 +11,7 @@ DT_FMT = "%m/%d/%Y %I:%M:%S %p"
 # NY Open Data dataset (coordinates by complex_id)
 COORDS_URL = (
     "https://data.ny.gov/resource/5f5g-n3cz.json"
-    "?$select=complex_id,complex_name,gtfs_latitude,gtfs_longitude"
+    "?$select=complex_id,stop_name,latitude,longitude"
     "&$limit=50000"
 )
 
@@ -186,15 +186,15 @@ def _load_coords():
     if isinstance(rows, list):
         for r in rows:
             cid = str(r.get("complex_id") or "").strip()
-            lat = r.get("gtfs_latitude")
-            lng = r.get("gtfs_longitude")
+            lat = r.get("latitude")
+            lng = r.get("longitude")
             if not cid or lat is None or lng is None:
                 continue
             try:
                 coords[cid] = {
                     "lat": float(lat),
                     "lng": float(lng),
-                    "name": str(r.get("complex_name") or "").strip(),
+                    "name": str(r.get("stop_name") or "").strip(),
                 }
             except Exception:
                 continue
