@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getStations, getStationStatus } from "../services/api";
 import { useFavorites } from "../hooks/useFavorites";
+import heroImg from "../assets/mta_train.jpg";
 
 function StatusBadge({ label, value }) {
   const normalized = (value || "").toLowerCase();
@@ -50,6 +51,10 @@ export default function Home() {
   const navigate = useNavigate();
   const { favorites, toggleFavorite } = useFavorites();
 
+  // ✅ Pagination for station cards
+  const PAGE_SIZE = 12;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -71,6 +76,7 @@ export default function Home() {
         const normalized = (Array.isArray(list) ? list : []).map(normalizeStation);
         setStations(normalized);
 
+        // only preview top 8
         const top = normalized.slice(0, 8);
         const previews = {};
 
@@ -109,6 +115,11 @@ export default function Home() {
     };
   }, []);
 
+  // ✅ Reset pagination when filters change (so user sees first page)
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [query, showOnlyFavorites, favorites]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = stations;
@@ -136,6 +147,11 @@ export default function Home() {
     return list;
   }, [query, stations, favorites, showOnlyFavorites]);
 
+  // ✅ only show first N cards, then "Read more"
+  const visibleStations = useMemo(() => {
+    return filtered.slice(0, visibleCount);
+  }, [filtered, visibleCount]);
+
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -149,14 +165,60 @@ export default function Home() {
               </p>
             </div>
 
-            <button
-              onClick={() => navigate("/map")}
-              className="shrink-0 px-4 py-2 rounded-xl bg-sky-500/20 text-sky-200 border border-sky-400/30
-                         hover:bg-sky-500/30 hover:text-white text-sm font-semibold transition
-                         focus:outline-none focus:ring-2 focus:ring-sky-400"
-            >
-              Map View
-            </button>
+            {/* NAV BUTTONS */}
+            <div className="shrink-0 flex flex-wrap gap-2">
+              <button
+                onClick={() => navigate("/map")}
+                className="px-4 py-2 rounded-xl bg-sky-500/20 text-sky-200 border border-sky-400/30
+                           hover:bg-sky-500/30 hover:text-white text-sm font-semibold transition
+                           focus:outline-none focus:ring-2 focus:ring-sky-400"
+              >
+                Map View
+              </button>
+
+              <button
+                onClick={() => navigate("/route-planner")}
+                className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-200 border border-emerald-400/30
+                           hover:bg-emerald-500/30 hover:text-white text-sm font-semibold transition
+                           focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                Route Planner
+              </button>
+
+              <button
+                onClick={() => navigate("/delay-insights")}
+                className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-200 border border-violet-400/30
+                           hover:bg-violet-500/30 hover:text-white text-sm font-semibold transition
+                           focus:outline-none focus:ring-2 focus:ring-violet-400"
+              >
+                Delay Insights
+              </button>
+
+              {/* ✅ Add Stations page link (optional but useful) */}
+              <button
+                onClick={() => navigate("/stations")}
+                className="px-4 py-2 rounded-xl bg-slate-500/20 text-slate-200 border border-slate-400/30
+                           hover:bg-slate-500/30 hover:text-white text-sm font-semibold transition
+                           focus:outline-none focus:ring-2 focus:ring-slate-300"
+              >
+                All Stations
+              </button>
+            </div>
+          </div>
+
+          {/* HERO IMAGE */}
+          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-800">
+            <img
+              src={heroImg}
+              alt="NYC Subway Train"
+              className="w-full h-60 sm:h-80 object-cover"
+              loading="lazy"
+            />
+            <div className="bg-slate-900/80 px-4 py-3">
+              <p className="text-sm text-slate-300">
+                Travel smart — check elevator & escalator availability before you go.
+              </p>
+            </div>
           </div>
 
           {/* Search */}
@@ -236,74 +298,100 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-5">
-            {filtered.map((s, idx) => {
-              const prev = statusPreview[s.id];
-              const isFav = favorites.includes(s.id);
-              const safeKey = `${s.id}-${idx}`;
+          <>
+            {/* ✅ Cards grid now uses visibleStations */}
+            <div className="grid sm:grid-cols-2 gap-5">
+              {visibleStations.map((s, idx) => {
+                const prev = statusPreview[s.id];
+                const isFav = favorites.includes(s.id);
+                const safeKey = `${s.id}-${idx}`;
 
-              return (
-                <div
-                  key={safeKey}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate(`/station/${s.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      navigate(`/station/${s.id}`);
-                    }
-                  }}
-                  className="cursor-pointer text-left bg-sky-50/95 border border-sky-200 rounded-2xl p-5
-                             shadow-md hover:shadow-xl hover:-translate-y-0.5 transition
-                             focus:outline-none focus:ring-2 focus:ring-sky-400"
+                return (
+                  <div
+                    key={safeKey}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => navigate(`/station/${s.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigate(`/station/${s.id}`);
+                      }
+                    }}
+                    className="cursor-pointer text-left bg-sky-50/95 border border-sky-200 rounded-2xl p-5
+                               shadow-md hover:shadow-xl hover:-translate-y-0.5 transition
+                               focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="pr-2">
+                        <h3 className="text-base font-bold text-slate-900">{s.name}</h3>
+                        <p className="text-sm text-slate-600 mt-1">Station ID: {s.id}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleFavorite(s.id);
+                          }}
+                          className={`text-xl leading-none px-2 py-1 rounded-lg ring-1 transition ${
+                            isFav
+                              ? "bg-yellow-50 text-yellow-600 ring-yellow-200"
+                              : "bg-white/80 text-slate-500 ring-slate-200 hover:bg-white"
+                          }`}
+                          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+                          title={isFav ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          {isFav ? "⭐" : "☆"}
+                        </button>
+
+                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-white/80 text-slate-700 ring-1 ring-slate-200">
+                          View
+                        </span>
+                      </div>
+                    </div>
+
+                    <LinePills lines={s.lines} />
+
+                    <div className="mt-4 space-y-2">
+                      <StatusBadge label="Elevator" value={prev?.elevator_status || "Loading…"} />
+                      <StatusBadge label="Escalator" value={prev?.escalator_status || "Loading…"} />
+                      {prev?.last_updated ? (
+                        <p className="text-xs text-slate-500 mt-3">
+                          Updated: {new Date(prev.last_updated).toLocaleString()}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ✅ Read more / Show less */}
+            <div className="flex flex-col items-center gap-3 mt-8">
+              {filtered.length > visibleCount ? (
+                <button
+                  onClick={() => setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length))}
+                  className="px-6 py-3 rounded-xl bg-sky-500 text-white font-semibold hover:bg-sky-400 transition"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="pr-2">
-                      <h3 className="text-base font-bold text-slate-900">{s.name}</h3>
-                      <p className="text-sm text-slate-600 mt-1">Station ID: {s.id}</p>
-                    </div>
+                  Read more
+                </button>
+              ) : (
+                <div className="text-slate-300 text-sm">You’ve reached the end.</div>
+              )}
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleFavorite(s.id);
-                        }}
-                        className={`text-xl leading-none px-2 py-1 rounded-lg ring-1 transition ${
-                          isFav
-                            ? "bg-yellow-50 text-yellow-600 ring-yellow-200"
-                            : "bg-white/80 text-slate-500 ring-slate-200 hover:bg-white"
-                        }`}
-                        aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
-                        title={isFav ? "Remove from favorites" : "Add to favorites"}
-                      >
-                        {isFav ? "⭐" : "☆"}
-                      </button>
-
-                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-white/80 text-slate-700 ring-1 ring-slate-200">
-                        View
-                      </span>
-                    </div>
-                  </div>
-
-                  <LinePills lines={s.lines} />
-
-                  <div className="mt-4 space-y-2">
-                    <StatusBadge label="Elevator" value={prev?.elevator_status || "Loading…"} />
-                    <StatusBadge label="Escalator" value={prev?.escalator_status || "Loading…"} />
-                    {prev?.last_updated ? (
-                      <p className="text-xs text-slate-500 mt-3">
-                        Updated: {new Date(prev.last_updated).toLocaleString()}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+              {visibleCount > PAGE_SIZE ? (
+                <button
+                  onClick={() => setVisibleCount(PAGE_SIZE)}
+                  className="px-6 py-3 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition"
+                >
+                  Show less
+                </button>
+              ) : null}
+            </div>
+          </>
         )}
       </main>
 
