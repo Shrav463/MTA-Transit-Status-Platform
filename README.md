@@ -1,7 +1,6 @@
 🚇 MTA Transit Accessibility Status Tracker
 
-1.A full-stack, cloud-deployed web application that provides real-time elevator and escalator status for NYC subway stations.
-2.Built with React on the frontend and a serverless AWS backend, this project consumes live MTA data feeds to help users quickly check station accessibility.
+1.MTA is a full-stack, cloud-deployed web application that provides real-time elevator and escalator status for NYC subway stations. Built with React and Tailwind CSS on the frontend and a serverless AWS backend using AWS Lambda, API Gateway (HTTP API), and AWS SAM, the application consumes live MTA GTFS data feeds to help users quickly check station accessibility. The frontend is hosted on Amazon S3 as a static website, while the backend is deployed on AWS for scalability, performance, and reliability. The platform includes searchable station listings, detailed status pages, favorites, and an interactive map view, with caching strategies applied to optimize API performance.
 
 🔗 Live Demo:
 👉 https://d113m09ugpl61d.cloudfront.net/station/119
