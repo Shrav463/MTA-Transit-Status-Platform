@@ -3,42 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getStations, getStationStatus } from "../services/api";
 import { useFavorites } from "../hooks/useFavorites";
 import heroImg from "../assets/mta_train.jpg";
-
-function StatusBadge({ label, value }) {
-  const normalized = (value || "").toLowerCase();
-  const tone =
-    normalized.includes("operational")
-      ? "bg-emerald-100 text-emerald-900 ring-emerald-200"
-      : normalized.includes("out")
-      ? "bg-rose-100 text-rose-900 ring-rose-200"
-      : "bg-sky-100 text-sky-900 ring-sky-200";
-
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-sm text-slate-700">{label}</span>
-      <span className={`text-xs font-semibold px-2 py-1 rounded-full ring-1 ${tone}`}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function LinePills({ lines = [] }) {
-  if (!lines?.length) return null;
-  return (
-    <div className="flex flex-wrap gap-2 mt-3">
-      {lines.slice(0, 10).map((ln, idx) => (
-        <span
-          key={`${ln}-${idx}`}
-          className="text-xs font-semibold px-2 py-1 rounded-full bg-sky-100 text-sky-900 ring-1 ring-sky-200"
-          aria-label={`Line ${ln}`}
-        >
-          {ln}
-        </span>
-      ))}
-    </div>
-  );
-}
+import MTAChatBot from "../components/MTAChatBot.jsx";
 
 function normalizeStation(raw) {
   const id = raw?.station_id ?? raw?.id ?? raw?.stationId ?? "";
@@ -47,14 +12,58 @@ function normalizeStation(raw) {
   return { id: String(id), name: String(name), lines };
 }
 
+function statusMeta(value) {
+  const v = (value || "").toLowerCase();
+  if (v.includes("operational")) return { cls: "b-green", dot: "dot-ok", label: value };
+  if (v.includes("out"))         return { cls: "b-red",   dot: "dot-out", label: value };
+  return { cls: "b-ghost", dot: "dot-unknown", label: value || "Unknown" };
+}
+
+function StatusRow({ label, value }) {
+  const m = statusMeta(value);
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</span>
+      <span className={`badge ${m.cls}`} style={{ fontSize: 11 }}>
+        <span className={`dot ${m.dot}`} />
+        {m.label}
+      </span>
+    </div>
+  );
+}
+
+function LineDots({ lines = [] }) {
+  if (!lines?.length) return null;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 10 }}>
+      {lines.slice(0, 8).map((ln, i) => (
+        <span key={`${ln}-${i}`} className="line-circle" title={`Line ${ln}`}>{ln}</span>
+      ))}
+    </div>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="card" style={{ padding: 20 }}>
+      <div className="skel" style={{ height: 16, width: "60%", marginBottom: 8 }} />
+      <div className="skel" style={{ height: 12, width: "35%" }} />
+      <div style={{ marginTop: 14, display: "flex", gap: 4 }}>
+        {[1,2,3].map(i => <div key={i} className="skel" style={{ width: 24, height: 24, borderRadius: "50%" }} />)}
+      </div>
+      <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="skel" style={{ height: 12 }} />
+        <div className="skel" style={{ height: 12 }} />
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const { favorites, toggleFavorite } = useFavorites();
-
-  // ✅ Pagination for station cards
   const PAGE_SIZE = 12;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -64,41 +73,23 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
-
     async function load() {
       try {
-        setError("");
-        setLoading(true);
-
+        setError(""); setLoading(true);
         const list = await getStations();
         if (!mounted) return;
-
         const normalized = (Array.isArray(list) ? list : []).map(normalizeStation);
         setStations(normalized);
-
-        // only preview top 8
         const top = normalized.slice(0, 8);
         const previews = {};
-
-        await Promise.all(
-          top.map(async (s) => {
-            try {
-              const st = await getStationStatus(s.id);
-              previews[s.id] = {
-                elevator_status: st.elevator_status ?? "Unknown",
-                escalator_status: st.escalator_status ?? "Unknown",
-                last_updated: st.last_updated ?? new Date().toISOString(),
-              };
-            } catch {
-              previews[s.id] = {
-                elevator_status: "Unknown",
-                escalator_status: "Unknown",
-                last_updated: new Date().toISOString(),
-              };
-            }
-          })
-        );
-
+        await Promise.all(top.map(async (s) => {
+          try {
+            const st = await getStationStatus(s.id);
+            previews[s.id] = { elevator_status: st.elevator_status ?? "Unknown", escalator_status: st.escalator_status ?? "Unknown", last_updated: st.last_updated ?? new Date().toISOString() };
+          } catch {
+            previews[s.id] = { elevator_status: "Unknown", escalator_status: "Unknown", last_updated: new Date().toISOString() };
+          }
+        }));
         if (!mounted) return;
         setStatusPreview(previews);
       } catch (e) {
@@ -108,297 +99,234 @@ export default function Home() {
         if (mounted) setLoading(false);
       }
     }
-
     load();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  // ✅ Reset pagination when filters change (so user sees first page)
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [query, showOnlyFavorites, favorites]);
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [query, showOnlyFavorites, favorites]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = stations;
-
-    if (q) {
-      list = list.filter((s) => {
-        const name = (s.name || "").toLowerCase();
-        const id = (s.id || "").toLowerCase();
-        return name.includes(q) || id.includes(q);
-      });
-    }
-
-    if (showOnlyFavorites) {
-      list = list.filter((s) => favorites.includes(s.id));
-    }
-
-    // Favorites first
+    if (q) list = list.filter(s => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
+    if (showOnlyFavorites) list = list.filter(s => favorites.includes(s.id));
     const favSet = new Set(favorites);
-    list = [...list].sort((a, b) => {
-      const af = favSet.has(a.id) ? 1 : 0;
-      const bf = favSet.has(b.id) ? 1 : 0;
-      return bf - af;
-    });
-
-    return list;
+    return [...list].sort((a, b) => (favSet.has(b.id) ? 1 : 0) - (favSet.has(a.id) ? 1 : 0));
   }, [query, stations, favorites, showOnlyFavorites]);
 
-  // ✅ only show first N cards, then "Read more"
-  const visibleStations = useMemo(() => {
-    return filtered.slice(0, visibleCount);
-  }, [filtered, visibleCount]);
+  const visibleStations = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      {/* Header */}
-      <header className="bg-slate-900 border-b border-slate-800">
-        <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-start justify-between gap-4">
+    <div className="page">
+      {/* Orange stripe */}
+      <div className="stripe" />
+
+      {/* Nav */}
+      <nav className="mta-nav">
+        <div className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {/* MTA-style bullet */}
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--orange)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <span className="display" style={{ fontSize: 16, color: "#fff", lineHeight: 1 }}>M</span>
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">MTA Transit Status</h1>
-              <p className="text-slate-300 mt-1">
-                Search a station to view elevator/escalator status and service alerts.
-              </p>
-            </div>
-
-            {/* NAV BUTTONS */}
-            <div className="shrink-0 flex flex-wrap gap-2">
-              <button
-                onClick={() => navigate("/map")}
-                className="px-4 py-2 rounded-xl bg-sky-500/20 text-sky-200 border border-sky-400/30
-                           hover:bg-sky-500/30 hover:text-white text-sm font-semibold transition
-                           focus:outline-none focus:ring-2 focus:ring-sky-400"
-              >
-                Map View
-              </button>
-
-              <button
-                onClick={() => navigate("/route-planner")}
-                className="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-200 border border-emerald-400/30
-                           hover:bg-emerald-500/30 hover:text-white text-sm font-semibold transition
-                           focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              >
-                Route Planner
-              </button>
-
-              <button
-                onClick={() => navigate("/delay-insights")}
-                className="px-4 py-2 rounded-xl bg-violet-500/20 text-violet-200 border border-violet-400/30
-                           hover:bg-violet-500/30 hover:text-white text-sm font-semibold transition
-                           focus:outline-none focus:ring-2 focus:ring-violet-400"
-              >
-                Delay Insights
-              </button>
-
-              {/* ✅ Add Stations page link (optional but useful) */}
-              <button
-                onClick={() => navigate("/stations")}
-                className="px-4 py-2 rounded-xl bg-slate-500/20 text-slate-200 border border-slate-400/30
-                           hover:bg-slate-500/30 hover:text-white text-sm font-semibold transition
-                           focus:outline-none focus:ring-2 focus:ring-slate-300"
-              >
-                All Stations
-              </button>
+              <div className="display" style={{ fontSize: 22, color: "var(--text)", letterSpacing: "0.06em" }}>
+                MTA TRANSIT STATUS
+              </div>
+              <div style={{ fontSize: 10, color: "var(--text-subtle)", letterSpacing: "0.12em", textTransform: "uppercase", marginTop: -2 }}>
+                New York City
+              </div>
             </div>
           </div>
-
-          {/* HERO IMAGE */}
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-800">
-            <img
-              src={heroImg}
-              alt="NYC Subway Train"
-              className="w-full h-60 sm:h-80 object-cover"
-              loading="lazy"
-            />
-            <div className="bg-slate-900/80 px-4 py-3">
-              <p className="text-sm text-slate-300">
-                Travel smart — check elevator & escalator availability before you go.
-              </p>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="mt-5">
-            <label className="block text-sm font-medium text-slate-200 mb-2" htmlFor="stationSearch">
-              Station search
-            </label>
-            <input
-              id="stationSearch"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Try: Union Sq, Penn Station, Times Sq..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder-slate-400
-                         focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400"
-            />
-          </div>
-
-          {/* Favorites toggle */}
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              onClick={() => setShowOnlyFavorites(false)}
-              className={`px-3 py-2 rounded-xl text-sm font-semibold border transition ${
-                !showOnlyFavorites
-                  ? "bg-sky-500 text-white border-sky-500"
-                  : "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
-              }`}
-            >
-              All Stations
-            </button>
-
-            <button
-              onClick={() => setShowOnlyFavorites(true)}
-              className={`px-3 py-2 rounded-xl text-sm font-semibold border transition ${
-                showOnlyFavorites
-                  ? "bg-sky-500 text-white border-sky-500"
-                  : "bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700"
-              }`}
-            >
-              Favorites {favorites.length ? `(${favorites.length})` : ""}
-            </button>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[["🗺 Map", "/map"], ["🗺 Route", "/route-planner"], ["⚡ Delays", "/delay-insights"], ["☰ Stations", "/stations"]].map(([label, path]) => (
+              <button key={path} onClick={() => navigate(path)} className="btn btn-ghost" style={{ padding: "7px 14px", fontSize: 12 }}>{label}</button>
+            ))}
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* Content */}
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">
-            Stations {filtered.length ? <span className="text-slate-300">({filtered.length})</span> : null}
-          </h2>
-          <span className="text-sm text-slate-400">Data source: AWS API</span>
+      {/* Hero */}
+      <div style={{ position: "relative", overflow: "hidden" }}>
+        <img src={heroImg} alt="NYC Subway" style={{ width: "100%", height: 280, objectFit: "cover", display: "block", filter: "brightness(0.45) saturate(0.7)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, var(--bg) 0%, transparent 50%)" }} />
+        <div className="wrap" style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "0 20px 28px" }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Live Service Status</div>
+          <div className="display fu" style={{ fontSize: "clamp(2.2rem, 5vw, 4rem)", color: "#fff" }}>
+            CHECK YOUR STATION
+          </div>
+          <p className="fu fu1" style={{ color: "var(--text-muted)", fontSize: 14, marginTop: 6, maxWidth: 480 }}>
+            Elevator & escalator availability before you head down.
+          </p>
+        </div>
+      </div>
+
+      {/* Search + filters */}
+      <div className="wrap" style={{ padding: "28px 20px 0" }}>
+        <div className="fu fu2" style={{ position: "relative" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-subtle)" strokeWidth="2" strokeLinecap="round"
+            style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search stations — Times Sq, Penn Station, Union Sq…"
+            className="inp"
+            style={{ paddingLeft: 40, paddingRight: 16, fontSize: 14 }}
+          />
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button onClick={() => setShowOnlyFavorites(false)} className="btn" style={{ padding: "7px 16px", fontSize: 12, background: !showOnlyFavorites ? "var(--orange)" : "var(--surface2)", color: !showOnlyFavorites ? "#fff" : "var(--text-muted)", border: !showOnlyFavorites ? "none" : "1px solid var(--border)" }}>
+            All Stations
+          </button>
+          <button onClick={() => setShowOnlyFavorites(true)} className="btn" style={{ padding: "7px 16px", fontSize: 12, background: showOnlyFavorites ? "var(--orange)" : "var(--surface2)", color: showOnlyFavorites ? "#fff" : "var(--text-muted)", border: showOnlyFavorites ? "none" : "1px solid var(--border)" }}>
+            ★ Favorites{favorites.length ? ` (${favorites.length})` : ""}
+          </button>
+        </div>
+      </div>
+
+      {/* Station grid */}
+      <main className="wrap" style={{ padding: "20px 20px 48px", flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            {loading ? "Loading…" : <><span style={{ color: "var(--text)", fontWeight: 600 }}>{filtered.length}</span> stations</>}
+          </div>
+          <div className="mono" style={{ fontSize: 11, color: "var(--text-subtle)", letterSpacing: "0.08em" }}>AWS API</div>
         </div>
 
         {loading ? (
-          <div className="bg-slate-800/60 rounded-2xl border border-slate-700 p-6">
-            <p className="text-slate-300">Loading stations…</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : error ? (
-          <div className="bg-slate-800/60 rounded-2xl border border-slate-700 p-6">
-            <p className="text-white font-semibold">Couldn’t load stations.</p>
-            <p className="text-slate-300 mt-1">{error}</p>
-            <p className="text-slate-300 mt-3">
-              Tip: Make sure your{" "}
-              <code className="px-1 py-0.5 bg-slate-900/60 border border-slate-700 rounded">
-                VITE_API_BASE
-              </code>{" "}
-              is correct and your AWS API is deployed.
-            </p>
+          <div className="card" style={{ padding: 28, borderColor: "rgba(255,51,85,.2)", background: "rgba(255,51,85,.04)" }}>
+            <div style={{ fontWeight: 700, color: "var(--red)", marginBottom: 6 }}>Connection Error</div>
+            <div style={{ color: "var(--text-muted)", fontSize: 13, lineHeight: 1.6 }}>{error}</div>
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-subtle)" }}>
+              Check that <code style={{ background: "var(--surface2)", padding: "1px 6px", borderRadius: 4, fontFamily: "monospace" }}>VITE_API_BASE</code> is set and your AWS API is deployed.
+            </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-slate-800/60 rounded-2xl border border-slate-700 p-6">
-            <p className="text-white font-semibold">
-              {showOnlyFavorites ? "No favorites yet." : "No stations found."}
-            </p>
-            <p className="text-slate-300 mt-1">
-              {showOnlyFavorites ? "Star a station to save it here." : "Try a different search keyword."}
-            </p>
+          <div className="card" style={{ padding: 40, textAlign: "center" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>{showOnlyFavorites ? "★" : "🔍"}</div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>{showOnlyFavorites ? "No favorites saved yet" : "No stations found"}</div>
+            <div style={{ color: "var(--text-muted)", fontSize: 13 }}>{showOnlyFavorites ? "Tap the star on any station card to save it." : "Try a different search term."}</div>
           </div>
         ) : (
           <>
-            {/* ✅ Cards grid now uses visibleStations */}
-            <div className="grid sm:grid-cols-2 gap-5">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
               {visibleStations.map((s, idx) => {
                 const prev = statusPreview[s.id];
                 const isFav = favorites.includes(s.id);
-                const safeKey = `${s.id}-${idx}`;
-
                 return (
                   <div
-                    key={safeKey}
-                    role="button"
-                    tabIndex={0}
+                    key={`${s.id}-${idx}`}
+                    className="card card-interactive fu"
+                    style={{ padding: 18, animationDelay: `${Math.min(idx, 8) * 0.04}s` }}
+                    role="button" tabIndex={0}
                     onClick={() => navigate(`/station/${s.id}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        navigate(`/station/${s.id}`);
-                      }
-                    }}
-                    className="cursor-pointer text-left bg-sky-50/95 border border-sky-200 rounded-2xl p-5
-                               shadow-md hover:shadow-xl hover:-translate-y-0.5 transition
-                               focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/station/${s.id}`); } }}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="pr-2">
-                        <h3 className="text-base font-bold text-slate-900">{s.name}</h3>
-                        <p className="text-sm text-slate-600 mt-1">Station ID: {s.id}</p>
+                    {/* Header */}
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15, lineHeight: 1.25, marginBottom: 3 }}>{s.name}</div>
+                        <div className="mono" style={{ fontSize: 10, color: "var(--text-subtle)", letterSpacing: "0.06em" }}>ID {s.id}</div>
                       </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleFavorite(s.id);
-                          }}
-                          className={`text-xl leading-none px-2 py-1 rounded-lg ring-1 transition ${
-                            isFav
-                              ? "bg-yellow-50 text-yellow-600 ring-yellow-200"
-                              : "bg-white/80 text-slate-500 ring-slate-200 hover:bg-white"
-                          }`}
-                          aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
-                          title={isFav ? "Remove from favorites" : "Add to favorites"}
-                        >
-                          {isFav ? "⭐" : "☆"}
-                        </button>
-
-                        <span className="text-xs font-semibold px-2 py-1 rounded-full bg-white/80 text-slate-700 ring-1 ring-slate-200">
-                          View
-                        </span>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); toggleFavorite(s.id); }}
+                        style={{ background: isFav ? "var(--yellow-dim)" : "var(--surface2)", border: `1px solid ${isFav ? "rgba(255,189,46,.25)" : "var(--border)"}`, color: isFav ? "var(--yellow)" : "var(--text-subtle)", borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: 13, transition: "all .15s" }}
+                        aria-label={isFav ? "Remove favorite" : "Add favorite"}
+                      >
+                        {isFav ? "★" : "☆"}
+                      </button>
                     </div>
 
-                    <LinePills lines={s.lines} />
+                    <LineDots lines={s.lines} />
 
-                    <div className="mt-4 space-y-2">
-                      <StatusBadge label="Elevator" value={prev?.elevator_status || "Loading…"} />
-                      <StatusBadge label="Escalator" value={prev?.escalator_status || "Loading…"} />
-                      {prev?.last_updated ? (
-                        <p className="text-xs text-slate-500 mt-3">
-                          Updated: {new Date(prev.last_updated).toLocaleString()}
-                        </p>
-                      ) : null}
+                    <hr className="divider" style={{ margin: "14px 0" }} />
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                      <StatusRow label="Elevator" value={prev?.elevator_status || "—"} />
+                      <StatusRow label="Escalator" value={prev?.escalator_status || "—"} />
                     </div>
+
+                    {prev?.last_updated && (
+                      <div className="mono" style={{ fontSize: 10, color: "var(--text-subtle)", marginTop: 10 }}>
+                        {new Date(prev.last_updated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            {/* ✅ Read more / Show less */}
-            <div className="flex flex-col items-center gap-3 mt-8">
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: 32 }}>
               {filtered.length > visibleCount ? (
-                <button
-                  onClick={() => setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length))}
-                  className="px-6 py-3 rounded-xl bg-sky-500 text-white font-semibold hover:bg-sky-400 transition"
-                >
-                  Read more
+                <button onClick={() => setVisibleCount(c => c + PAGE_SIZE)} className="btn btn-primary" style={{ minWidth: 160 }}>
+                  Load more
                 </button>
               ) : (
-                <div className="text-slate-300 text-sm">You’ve reached the end.</div>
+                <div style={{ color: "var(--text-subtle)", fontSize: 12, letterSpacing: "0.1em" }}>END OF LINE</div>
               )}
-
-              {visibleCount > PAGE_SIZE ? (
-                <button
-                  onClick={() => setVisibleCount(PAGE_SIZE)}
-                  className="px-6 py-3 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition"
-                >
+              {visibleCount > PAGE_SIZE && (
+                <button onClick={() => setVisibleCount(PAGE_SIZE)} className="btn btn-subtle" style={{ minWidth: 120, fontSize: 12 }}>
                   Show less
                 </button>
-              ) : null}
+              )}
             </div>
           </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800 bg-slate-900">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-sm text-slate-400">
-          Built as a portfolio project using React + Tailwind and AWS serverless architecture.
+      <MTAChatBot />
+      <footer style={{ background: "var(--surface2)", borderTop: "2px solid var(--orange)", marginTop: "auto" }}>
+        {/* Top bar */}
+        <div style={{ background: "var(--orange)", padding: "10px 20px" }}>
+          <div className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", border: "1.5px solid rgba(255,255,255,0.4)" }}>
+                <span className="display" style={{ fontSize: 13, color: "#fff" }}>M</span>
+              </div>
+              <span className="display" style={{ fontSize: 14, color: "#fff", letterSpacing: "0.1em" }}>MTA TRANSIT STATUS</span>
+            </div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {[["Map", "/map"], ["Route Planner", "/route-planner"], ["Delay Insights", "/delay-insights"], ["Stations", "/stations"]].map(([label, path]) => (
+                <a key={path} href={path} style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", textDecoration: "none", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</a>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Bottom bar */}
+        <div style={{ padding: "14px 20px" }}>
+          <div className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 10, color: "var(--text-subtle)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>Platform</div>
+                <div className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>React · AWS Serverless</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: "var(--text-subtle)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>Data</div>
+                <div className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>MTA Open API</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: "var(--text-subtle)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 3 }}>Coverage</div>
+                <div className="mono" style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>NYC Subway</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "inline-block", boxShadow: "0 0 6px var(--green)" }} />
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600 }}>Systems Operational</span>
+            </div>
+          </div>
+          <div className="wrap" style={{ borderTop: "1px solid var(--border)", marginTop: 12, paddingTop: 12 }}>
+            <div style={{ fontSize: 10, color: "var(--text-subtle)", lineHeight: 1.6 }}>
+              © {new Date().getFullYear()} MTA Transit Status Platform · Real-time elevator &amp; escalator data · For informational use only · Not an official MTA product
+            </div>
+          </div>
         </div>
       </footer>
     </div>

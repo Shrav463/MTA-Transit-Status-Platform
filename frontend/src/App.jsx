@@ -1,30 +1,24 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
-import Station from "./pages/Station";
-import Stations from "./pages/Station";   // ✅ ADD THIS
 import MapView from "./pages/MapView";
 import RoutePlanner from "./pages/RoutePlanner";
+import StationPage from "./pages/StationPage";
+import Stations from "./pages/Station";
 import DelayInsights from "./pages/DelayInsights";
 
-export default function App() {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<Home />} />
-
-        {/* ✅ Stations list page */}
-        <Route path="/stations" element={<Stations />} />
-
-        {/* Station detail page */}
-        <Route path="/station/:stationId" element={<Station />} />
-
         <Route path="/map" element={<MapView />} />
         <Route path="/route-planner" element={<RoutePlanner />} />
+        <Route path="/station/:id" element={<StationPage />} />
+        <Route path="/stations" element={<Stations />}/>
         <Route path="/delay-insights" element={<DelayInsights />} />
-
-        {/* keep this LAST */}
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
+
+export default App;
