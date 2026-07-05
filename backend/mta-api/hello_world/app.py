@@ -26,7 +26,11 @@ def _resp(status_code, body):
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "*",
+<<<<<<< HEAD
             "Access-Control-Allow-Methods": "GET,OPTIONS"
+=======
+            "Access-Control-Allow-Methods": "*",
+>>>>>>> 3b2721e5055772c6e4d92bd61fd7854c779af0b4
         },
         "body": json.dumps(body),
     }

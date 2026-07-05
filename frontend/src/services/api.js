@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 const BASE = (import.meta.env.VITE_API_BASE || "").replace(/\/$/, "");
+=======
+const BASE = import.meta.env.VITE_API_BASE;
+>>>>>>> 3b2721e5055772c6e4d92bd61fd7854c779af0b4
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -10,6 +14,10 @@ function fallback() {
     last_updated: new Date().toISOString(),
   };
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 3b2721e5055772c6e4d92bd61fd7854c779af0b4
 export async function getStations() {
   await sleep(150);
 
