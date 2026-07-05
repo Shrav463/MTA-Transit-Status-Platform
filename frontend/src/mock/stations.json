@@ -1,0 +1,5 @@
+[
+  { "station_id": "R14", "station_name": "14 St – Union Sq", "lines": ["4", "5", "6", "L", "N", "Q", "R", "W"] },
+  { "station_id": "A12", "station_name": "34 St – Penn Station", "lines": ["A", "C", "E"] },
+  { "station_id": "127", "station_name": "Times Sq – 42 St", "lines": ["1", "2", "3", "7", "N", "Q", "R", "W", "S"] }
+]

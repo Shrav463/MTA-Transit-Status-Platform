@@ -1,0 +1,20 @@
+{
+  "R14": {
+    "elevator_status": "Out of Service",
+    "escalator_status": "Operational",
+    "alerts": ["Elevator maintenance in progress"],
+    "last_updated": "2026-01-21T20:30:00Z"
+  },
+  "A12": {
+    "elevator_status": "Operational",
+    "escalator_status": "Operational",
+    "alerts": [],
+    "last_updated": "2026-01-21T20:28:00Z"
+  },
+  "127": {
+    "elevator_status": "Operational",
+    "escalator_status": "Out of Service",
+    "alerts": ["Escalator repair scheduled overnight"],
+    "last_updated": "2026-01-21T20:25:00Z"
+  }
+}
