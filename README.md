@@ -6,7 +6,7 @@
 **Live Demo:**
  https://d2z3zoax111gkl.cloudfront.net/
 =======
-<img width="1910" height="1005" alt="image" src="https://github.com/user-attachments/assets/cfb656b9-f62b-4538-b347-9b165aa491ac" />
+<img width="1920" height="989" alt="image" src="https://github.com/user-attachments/assets/6f10e769-7a1f-4bf0-8cdc-7042ba232fb9" />
 
  **API Base URL:**
  https://j44rvw6710.execute-api.us-east-1.amazonaws.com/Prod
