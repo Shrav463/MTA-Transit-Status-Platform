@@ -1,31 +1,26 @@
-🚇 MTA Transit Accessibility Status Tracker
+**MTA Transit Accessibility Status Tracker**
 
 1.MTA is a full-stack, cloud-deployed web application that provides real-time elevator and escalator status for NYC subway stations. Built with React and Tailwind CSS on the frontend and a serverless AWS backend using AWS Lambda, API Gateway (HTTP API), and AWS SAM, the application consumes live MTA GTFS data feeds to help users quickly check station accessibility. The frontend is hosted on Amazon S3 as a static website, while the backend is deployed on AWS for scalability, performance, and reliability. The platform includes searchable station listings, detailed status pages, favorites, and an interactive map view, with caching strategies applied to optimize API performance.
 <<<<<<< HEAD
 
-🔗 Live Demo:
-👉 https://d113m09ugpl61d.cloudfront.net
+**Live Demo:**
+ https://d2z3zoax111gkl.cloudfront.net/
 =======
 <img width="1910" height="1005" alt="image" src="https://github.com/user-attachments/assets/cfb656b9-f62b-4538-b347-9b165aa491ac" />
 
+ **API Base URL:**
+ https://j44rvw6710.execute-api.us-east-1.amazonaws.com/Prod
 
-🔗 Live Demo:
-👉 https://d113m09ugpl61d.cloudfront.net/
->>>>>>> 3b2721e5055772c6e4d92bd61fd7854c779af0b4
+**Features**
 
-🔗 API Base URL:
-👉 https://j44rvw6710.execute-api.us-east-1.amazonaws.com/Prod
+1.Search subway stations by name or ID
+2. View real-time elevator and escalator operational status
+3.See active and upcoming outage alerts with reasons and ETAs
+4.Fast, serverless backend using AWS Lambda
+5. Secure, production-grade frontend deployment using CloudFront
+6. Responsive UI built with modern React + Tailwind CSS
 
-✨ Features
-
-🔍 Search subway stations by name or ID
-♿ View real-time elevator and escalator operational status
-🚨 See active and upcoming outage alerts with reasons and ETAs
-⚡ Fast, serverless backend using AWS Lambda
-🌐 Secure, production-grade frontend deployment using CloudFront
-📱 Responsive UI built with modern React + Tailwind CSS
-
-🏗️ Architecture Overview
+**Architecture Overview**
 
 React (Vite + Tailwind)
         ↓
@@ -40,14 +35,14 @@ AWS Lambda (Python)
 MTA Live Elevator & Escalator Feeds
 
 
-This architecture ensures:
+**This architecture ensures:**
 
 1.high availability
 2.low latency
 3.minimal infrastructure management
 4.secure access to live public transit data
 
-🛠️ Tech Stack
+**Tech Stack**
 
 Frontend
 
@@ -56,7 +51,7 @@ Frontend
 3.JavaScript (ES6+)
 4.HTML5 / CSS3
 
-Backend
+**Backend**
 
 1.Python
 2.AWS Lambda
@@ -68,13 +63,13 @@ Backend
 8.IAM (least-privilege access)
 9.CloudWatch (logs & monitoring)
 
-Data Source
+**Data Source**
 
 1.MTA Elevator & Escalator Feeds
 2.Equipment feed
 3.Outage feed
 
-🔌 API Endpoints
+**API Endpoints**
 GET /stations
 
 Returns all subway stations with accessibility equipment.
@@ -108,22 +103,22 @@ Response (sample):
   "last_updated": "2026-02-03T19:40:12Z"
 }
 
-🚀 Deployment Details
+**Deployment Details**
 
-Frontend
+**Frontend**
 
 1.Built using npm run build
 2.Deployed to Amazon S3
 3.Served securely via Amazon CloudFront
 4.SPA routing handled via CloudFront custom error responses
 
-Backend
+**Backend**
 
 1.Deployed using AWS SAM
 2.Serverless Lambda functions written in Python
 3.Environment variables used for configuration (no hard-coded secrets)
 
-🔐 Security & Best Practices
+**Security & Best Practices**
 
 1.Private S3 bucket (no public access)
 2.CloudFront Origin Access Control (OAC)
@@ -131,7 +126,7 @@ Backend
 4.CORS enabled correctly for API access
 5.Environment variables used for external configuration
 
-📈 Why This Project Matters
+**Why This Project Matters**
 
 1.This project demonstrates:
 2.Real-world use of serverless AWS architecture
@@ -141,7 +136,7 @@ Backend
 6.Practical focus on accessibility and usability
 7.It was built end-to-end to reflect how modern web applications are designed, deployed, and maintained in industry.
 
-🧩 Future Enhancements
+**Future Enhancements**
 
 1.Station detail pages with equipment history
 2.Map-based visualization
